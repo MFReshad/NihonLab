@@ -47,11 +47,23 @@ export default function App() {
   // Public pages (before login)
   if (!isLoggedIn) {
     if (currentPage === 'signup') {
-      return <SignUpPage onSignUp={handleSignUp} onBack={() => setCurrentPage('home')} />;
+      return (
+        <SignUpPage 
+          onSignUp={handleSignUp} 
+          onBack={() => setCurrentPage('home')}
+          onNavigateToLogin={() => setCurrentPage('login')}
+        />
+      );
     }
 
     if (currentPage === 'login') {
-      return <LoginPage onLogin={handleLogin} onBack={() => setCurrentPage('home')} />;
+      return (
+        <LoginPage 
+          onLogin={handleLogin} 
+          onBack={() => setCurrentPage('home')}
+          onNavigateToSignUp={() => setCurrentPage('signup')}
+        />
+      );
     }
 
     return (
