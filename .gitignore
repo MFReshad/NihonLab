@@ -143,9 +143,15 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+__pycache__/
+*.pyc
+
+db.sqlite3
 
 # Node.js / Frontend dependencies
 node_modules/
+dist/
+build/
 
 # Spyder project settings
 .spyderproject
