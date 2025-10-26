@@ -7,7 +7,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-
 from .models import User
 
 
