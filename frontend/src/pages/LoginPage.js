@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+
 
 function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
   const [formData, setFormData] = useState({
@@ -7,6 +8,84 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
     password: '',
   });
   const [error, setError] = useState('');
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+
+
+  useEffect(() => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeGoogleSignIn;
+    document.body.appendChild(script);
+
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+
+  const initializeGoogleSignIn = () => {
+    if (window.google) {
+      window.google.accounts.id.initialize({
+        client_id: '713448377274-vkp9efs9nhm399l0cni208d83fuh4nl1.apps.googleusercontent.com', // Replace with your actual Client ID
+        callback: handleGoogleResponse,
+      });
+      setIsGoogleLoaded(true);
+    }
+  };
+
+  const handleGoogleResponse = async (response) => {
+  console.log('Google response:', response);
+  
+  try {
+    const payload = {
+      credential: response.credential,
+    };
+    
+    console.log('Sending to backend:', payload);
+    
+    const res = await fetch('http://localhost:8000/api/users/auth/google/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log('Response status:', res.status);
+    
+    const data = await res.json();
+    console.log('Response data:', data);
+
+    if (res.ok) {
+      // Store tokens
+      localStorage.setItem('access_token', data.tokens.access);
+      localStorage.setItem('refresh_token', data.tokens.refresh);
+
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      onLogin(data.user || {});
+    } else {
+      console.error('Backend error:', data);
+      setError(data.error || 'Google authentication failed');
+    }
+  } catch (err) {
+    console.error('Google login error:', err);
+    setError('Failed to authenticate with Google. Please try again.');
+  }
+};
+
+const handleGoogleLogin = () => {
+    if (window.google) {
+      window.google.accounts.id.prompt(); // Show One Tap dialog
+    }
+  };
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -16,25 +95,23 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
     }));
   };
 
-  const handleGoogleLogin = () => {
-    // Implement Google OAuth here
-    console.log('Google login clicked');
-    alert('Google login would be implemented here with OAuth 2.0');
-  };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
 
     if (!formData.email || !formData.password) {
       setError('Email and password are required');
       return;
     }
 
+
+    // Your existing email/password login logic
     onLogin(formData);
   };
 
-  return (
+   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="flex items-center justify-between mb-6">
@@ -47,7 +124,9 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
           </button>
         </div>
 
+
         <h2 className="text-2xl font-bold mb-8">Welcome back</h2>
+
 
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
@@ -55,9 +134,11 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
           </div>
         )}
 
+
         <button
           onClick={handleGoogleLogin}
-          className="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition flex items-center justify-center gap-3 mb-6"
+          disabled={!isGoogleLoaded}
+          className="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition flex items-center justify-center gap-3 mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M19.8 10.2273C19.8 9.51821 19.7364 8.83639 19.6182 8.18182H10.2V12.0491H15.6109C15.3727 13.2909 14.6873 14.3382 13.6636 15.0473V17.5673H16.8727C18.7618 15.8382 19.8 13.2727 19.8 10.2273Z" fill="#4285F4"/>
@@ -68,6 +149,8 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
           Continue with Google
         </button>
 
+
+
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
@@ -77,7 +160,8 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
           </div>
         </div>
 
-        <div className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email address
@@ -106,13 +190,15 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
             />
           </div>
 
+
           <button
-            onClick={handleSubmit}
+            type="submit"
             className="w-full bg-slate-700 text-white py-3 rounded-lg font-semibold hover:bg-slate-800 transition mt-2"
           >
             Sign in
           </button>
-        </div>
+        </form>
+
 
         <p className="text-center text-gray-600 mt-6 text-sm">
           Don't have an account?{' '}
@@ -127,5 +213,6 @@ function LoginPage({ onLogin, onBack, onNavigateToSignUp }) {
     </div>
   );
 }
+
 
 export default LoginPage;
