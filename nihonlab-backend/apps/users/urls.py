@@ -6,5 +6,8 @@ urlpatterns = [
     # path('login/', views.login, name='login'),
     # path('profile/', views.profile, name='profile'),
     # path('stats/', views.user_stats, name='user-stats'),
-    path('', views.Home, name='home'),
+    # path('', views.Home, name='home'),
+
+    #User 
+    path('auth/google/', views.google_auth, name='google-auth'),
 ]
