@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NihonLab Design System - Japanese Learning Platform */
+
+@layer base {
+  :root {
+    /* Core Brand Colors - Orange & Green Palette */
+    --background: 154 58% 85%;
+    --foreground: 13 93% 25%;
+
+    --card: 154 58% 90%;
+    --card-foreground: 13 93% 25%;
+
+    --popover: 154 58% 90%;
+    --popover-foreground: 13 93% 25%;
+
+    /* Primary - Brightly Orange (#f43a09) */
+    --primary: 13 93% 50%;
+    --primary-foreground: 255 255 255;
+    --primary-glow: 13 93% 60%;
+
+    /* Secondary - Grandpa Orange (#ffb766) */
+    --secondary: 32 100% 70%;
+    --secondary-foreground: 13 93% 25%;
+
+    /* Muted tones */
+    --muted: 154 40% 92%;
+    --muted-foreground: 154 20% 35%;
+
+    /* Accent - Live Green */
+    --accent: 138 56% 62%;
+    --accent-foreground: 255 255 255;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 255 255 255;
+
+    --border: 154 45% 75%;
+    --input: 154 45% 88%;
+    --ring: 13 93% 50%;
+
+    --radius: 1rem;
+
+    /* Japanese Theme Specific - Orange & Green Palette */
+    --orange-primary: 13 93% 50%;
+    --orange-secondary: 32 100% 70%;
+    --green-bg: 154 58% 85%;
+    --green-success: 138 56% 62%;
+    
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(13 93% 50%) 0%, hsl(32 100% 70%) 100%);
+    --gradient-bg: linear-gradient(180deg, hsl(154 58% 85%) 0%, hsl(154 58% 90%) 100%);
+    --gradient-midnight: linear-gradient(180deg, hsl(243 75% 13%) 0%, hsl(243 65% 20%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(154 58% 90% / 0.9) 0%, hsl(154 45% 88%) 100%);
+    
+    /* Shadows */
+    --shadow-card: 0 4px 20px -4px hsl(13 93% 50% / 0.15);
+    --shadow-glow: 0 0 30px hsl(32 100% 70% / 0.4);
+    --shadow-float: 0 8px 30px -8px hsl(138 56% 62% / 0.25);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .dark {
+    /* Dark Mode - Orange & Green Dark Theme */
+    --background: 154 45% 15%;
+    --foreground: 154 58% 95%;
+
+    --card: 154 40% 22%;
+    --card-foreground: 154 58% 95%;
+
+    --popover: 154 40% 22%;
+    --popover-foreground: 154 58% 95%;
+
+    --primary: 13 93% 50%;
+    --primary-foreground: 255 255 255;
+
+    --secondary: 32 100% 70%;
+    --secondary-foreground: 13 93% 25%;
+
+    --muted: 154 35% 28%;
+    --muted-foreground: 154 20% 70%;
+
+    --accent: 138 56% 55%;
+    --accent-foreground: 255 255 255;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 154 58% 95%;
+
+    --border: 154 35% 28%;
+    --input: 154 35% 28%;
+    --ring: 13 93% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    font-family: 'Noto Sans JP', 'Poppins', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', 'Noto Sans JP', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Custom Gradient Utilities */
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-bg {
+    background: var(--gradient-bg);
+  }
+
+  .gradient-midnight {
+    background: var(--gradient-midnight);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  /* Shadow Utilities */
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-float {
+    box-shadow: var(--shadow-float);
+  }
+
+  /* Animation Classes */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+
+  /* Japanese Text Styling */
+  .japanese-text {
+    font-family: 'Noto Sans JP', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  /* Glow Effect for Streaks */
+  .glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      opacity: 1;
+      filter: drop-shadow(0 0 8px hsl(var(--flame-accent)));
+    }
+    50% {
+      opacity: 0.8;
+      filter: drop-shadow(0 0 16px hsl(var(--flame-accent)));
+    }
+  }
+
+  /* Calm Float Animation */
+  .calm-float {
+    animation: calm-float 8s ease-in-out infinite;
+  }
+
+  @keyframes calm-float {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-20px) rotate(5deg);
+    }
+    50% {
+      transform: translateY(0) rotate(0deg);
+    }
+    75% {
+      transform: translateY(-15px) rotate(-5deg);
+    }
+  }
+
+  /* Card Hover Effects */
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+
+  .card-hover:hover {
+    @apply scale-105 -translate-y-1 shadow-float;
+  }
+}
