@@ -1,142 +1,276 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api, User, setTokens, clearTokens, getAccessToken } from '@/lib/utils';
 
 interface UserProgress {
-  xp: number;
   streak: number;
-  lastVisit: string;
-  level: number;
   cardsLearned: number;
+  level: number;
+  xp: number;
 }
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatarUrl?: string;
-  provider?: 'email' | 'google';
-}
-
-interface Store {
-  userProgress: UserProgress;
+interface AuthState {
   user: User | null;
+  userProgress: UserProgress;
   isAuthenticated: boolean;
-  addXP: (amount: number) => void;
-  updateStreak: () => void;
-  incrementCardsLearned: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  logout: () => void;
+  isLoading: boolean;
+  error: string | null;
 }
 
-const getTodayDate = (): string => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+interface AuthActions {
+  setUser: (user: User | null) => void;
+  setUserProgress: (progress: UserProgress) => void;
+  updateUserProgress: (updates: Partial<UserProgress>) => void;
+  updateStreak: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
+  clearError: () => void;
+}
+
+type StoreState = AuthState & AuthActions;
+
+// Default user progress for new users
+const DEFAULT_USER_PROGRESS: UserProgress = {
+  streak: 0,
+  cardsLearned: 0,
+  level: 1,
+  xp: 0,
 };
 
-const checkStreak = (lastVisit: string): number => {
-  const today = getTodayDate();
-  const lastDate = lastVisit.split('T')[0]; // Extract date part
-  
-  if (today === lastDate) return 0; // Same day, no change
-  
-  const todayObj = new Date(today);
-  const lastObj = new Date(lastDate);
-  const diffTime = todayObj.getTime() - lastObj.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 1) return 1; // Consecutive day
-  return -1; // Streak broken
-};
-
-export const useStore = create<Store>()(
+export const useStore = create<StoreState>()(
   persist(
-    (set) => ({
-      userProgress: {
-        xp: 0,
-        streak: 0,
-        lastVisit: new Date().toISOString(),
-        level: 1,
-        cardsLearned: 0,
-      },
+    (set, get) => ({
+      // Initial state
       user: null,
+      userProgress: DEFAULT_USER_PROGRESS,
       isAuthenticated: false,
-      addXP: (amount: number) =>
-        set((state) => {
-          const newXP = state.userProgress.xp + amount;
-          const newLevel = Math.floor(newXP / 1000) + 1;
-          return {
-            userProgress: {
-              ...state.userProgress,
-              xp: newXP,
-              level: newLevel,
-            },
-          };
-        }),
-      updateStreak: () =>
-        set((state) => {
-          const streakChange = checkStreak(state.userProgress.lastVisit);
-          const newStreak =
-            streakChange === -1
-              ? 1
-              : state.userProgress.streak + (streakChange === 1 ? 1 : 0);
-          
-          return {
-            userProgress: {
-              ...state.userProgress,
-              streak: newStreak,
-              lastVisit: new Date().toISOString(),
-            },
-          };
-        }),
-      incrementCardsLearned: () =>
+      isLoading: false,
+      error: null,
+
+      // Actions
+      setUser: (user) => {
+        set({
+          user,
+          isAuthenticated: !!user,
+          error: null,
+        });
+        
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+        } else {
+          localStorage.removeItem('user');
+        }
+      },
+
+      setUserProgress: (progress) => {
+        set({ userProgress: progress });
+      },
+
+      updateUserProgress: (updates) => {
         set((state) => ({
-          userProgress: {
-            ...state.userProgress,
-            cardsLearned: state.userProgress.cardsLearned + 1,
-          },
-        })),
-      login: async (email: string, password: string) => {
-        // Mock login - in production, this would call an API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        const user = {
-          id: Math.random().toString(36).substr(2, 9),
-          email,
-          name: email.split('@')[0],
-          provider: 'email' as const,
-        };
-        set({ user, isAuthenticated: true });
+          userProgress: { ...state.userProgress, ...updates }
+        }));
       },
-      signup: async (name: string, email: string, password: string) => {
-        // Mock signup - in production, this would call an API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        const user = {
-          id: Math.random().toString(36).substr(2, 9),
-          email,
-          name,
-          provider: 'email' as const,
-        };
-        set({ user, isAuthenticated: true });
+
+      login: async (email, password) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          const response = await api.login(email, password);
+          
+          // Store tokens
+          setTokens(response.tokens);
+          
+          // Update state with default progress initially
+          set({
+            user: response.user,
+            userProgress: DEFAULT_USER_PROGRESS,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+          
+          localStorage.setItem('user', JSON.stringify(response.user));
+
+          // TODO: Fetch actual user progress from backend
+          // try {
+          //   const userProgress = await api.getUserProgress();
+          //   set({ userProgress });
+          // } catch (error) {
+          //   console.error('Failed to fetch user progress:', error);
+          // }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Login failed',
+            isLoading: false,
+          });
+          throw error;
+        }
       },
-      loginWithGoogle: async () => {
-        // Mock Google OAuth - in production, this would use real OAuth
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const user = {
-          id: Math.random().toString(36).substr(2, 9),
-          email: 'sakura.user@gmail.com',
-          name: 'Sakura Y.',
-          avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sakura',
-          provider: 'google' as const,
-        };
-        set({ user, isAuthenticated: true });
+
+      signup: async (firstName, lastName, email, password) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          const response = await api.register(email, password, firstName, lastName);
+          
+          // Store tokens
+          setTokens(response.tokens);
+          
+          // Update state with default progress for new users
+          set({
+            user: response.user,
+            userProgress: DEFAULT_USER_PROGRESS,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+          
+          localStorage.setItem('user', JSON.stringify(response.user));
+
+          // TODO: Create initial user progress in backend
+          // try {
+          //   await api.createUserProgress(DEFAULT_USER_PROGRESS);
+          // } catch (error) {
+          //   console.error('Failed to create user progress:', error);
+          // }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Signup failed',
+            isLoading: false,
+          });
+          throw error;
+        }
       },
-      logout: () => {
-        set({ user: null, isAuthenticated: false });
+
+      loginWithGoogle: async (credential) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          const response = await api.googleAuth(credential);
+          
+          // Store tokens
+          setTokens(response.tokens);
+          
+          // Update state with default progress initially
+          set({
+            user: response.user,
+            userProgress: DEFAULT_USER_PROGRESS,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+          
+          localStorage.setItem('user', JSON.stringify(response.user));
+
+          // TODO: Fetch or create user progress from backend
+          // try {
+          //   const userProgress = await api.getUserProgress();
+          //   set({ userProgress });
+          // } catch (error) {
+          //   // If user progress doesn't exist, create it
+          //   await api.createUserProgress(DEFAULT_USER_PROGRESS);
+          // }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Google login failed',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      logout: async () => {
+        set({ isLoading: true });
+        
+        try {
+          await api.logout();
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          // Clear tokens and state
+          clearTokens();
+          set({
+            user: null,
+            userProgress: DEFAULT_USER_PROGRESS,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null,
+          });
+        }
+      },
+
+      checkAuth: async () => {
+        const accessToken = getAccessToken();
+        
+        if (!accessToken) {
+          set({ 
+            isAuthenticated: false, 
+            user: null, 
+            userProgress: DEFAULT_USER_PROGRESS 
+          });
+          return;
+        }
+
+        try {
+          // Try to get user profile to verify token
+          const user = await api.getProfile();
+          
+          set({
+            user,
+            userProgress: DEFAULT_USER_PROGRESS,
+            isAuthenticated: true,
+            error: null,
+          });
+
+          // TODO: Fetch actual user progress
+          // try {
+          //   const userProgress = await api.getUserProgress();
+          //   set({ userProgress });
+          // } catch (error) {
+          //   console.error('Failed to fetch user progress:', error);
+          // }
+        } catch (error) {
+          // Token is invalid, clear everything
+          clearTokens();
+          set({
+            user: null,
+            userProgress: DEFAULT_USER_PROGRESS,
+            isAuthenticated: false,
+            error: null,
+          });
+        }
+      },
+
+      clearError: () => {
+        set({ error: null });
+      },
+
+      updateStreak: () => {
+        const today = new Date().toISOString().split('T')[0];
+        const lastVisit = localStorage.getItem('lastVisit');
+        
+        if (lastVisit !== today) {
+          localStorage.setItem('lastVisit', today);
+          set((state) => ({
+            userProgress: {
+              ...state.userProgress,
+              streak: state.userProgress.streak + 1
+            }
+          }));
+        }
       },
     }),
     {
-      name: 'nihonlab-storage',
+      name: 'auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        userProgress: state.userProgress,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

@@ -41,7 +41,7 @@ const Landing = () => {
   }, []);
   const handleGetStarted = () => {
     if (isAuthenticated) {
-      navigate('/app/dashboard');
+      navigate('/dashboard');
     } else {
       navigate('/auth');
     }

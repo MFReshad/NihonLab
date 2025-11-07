@@ -19,7 +19,8 @@ interface LoginForm {
 }
 
 interface SignupForm {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -29,6 +30,29 @@ interface ForgotForm {
   email: string;
 }
 
+interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  registration_method: 'email' | 'google';
+  is_active: boolean;
+  date_joined: string;
+  avatarUrl?: string;
+}
+
+interface AuthResponse {
+  message: string;
+  user: User;
+  tokens: {
+    access: string;
+    refresh: string;
+  };
+}
+
+const API_BASE_URL = 'http://localhost:8000/api/users';
+
 const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,9 +60,10 @@ const Auth = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   
   const navigate = useNavigate();
-  const { login, signup, loginWithGoogle, isAuthenticated } = useStore();
+  const { isAuthenticated, setUser } = useStore();
   
   const loginForm = useForm<LoginForm>();
   const signupForm = useForm<SignupForm>();
@@ -46,9 +71,96 @@ const Auth = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+useEffect(() => {
+  // Load Google Sign-In script
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+
+  script.onload = () => {
+    // Wait until window.google is ready
+    if (window.google && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: '713448377274-vkp9efs9nhm399l0cni208d83fuh4nl1.apps.googleusercontent.com',
+        callback: handleGoogleResponse,
+      });
+      setIsGoogleLoaded(true);
+    } else {
+      console.error("Google API not loaded properly");
+    }
+  };
+
+  document.body.appendChild(script);
+
+  return () => {
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existingScript) {
+      document.body.removeChild(existingScript);
+    }
+  };
+}, []);
+
+  const initializeGoogleSignIn = () => {
+    if (window.google) {
+      window.google.accounts.id.initialize({
+        client_id: '713448377274-vkp9efs9nhm399l0cni208d83fuh4nl1.apps.googleusercontent.com',
+        callback: handleGoogleResponse,
+      });
+      setIsGoogleLoaded(true);
+    }
+  };
+
+  const handleGoogleResponse = async (response: any) => {
+    console.log('Google response:', response);
+    
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_BASE_URL}/auth/google/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credential: response.credential,
+        }),
+      });
+
+      const data: AuthResponse = await res.json();
+
+      if (res.ok) {
+        // Store tokens
+        localStorage.setItem('access_token', data.tokens.access);
+        localStorage.setItem('refresh_token', data.tokens.refresh);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        // Update store
+        setUser(data.user);
+
+        toast.success('Welcome to NihonLab! 🎌');
+        navigate('/dashboard');
+      } else {
+        toast.error((data as any).error || 'Google authentication failed');
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
+      toast.error('Failed to authenticate with Google. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    if (window.google && isGoogleLoaded) {
+      window.google.accounts.id.prompt();
+    } else {
+      toast.error('Google Sign-In is loading. Please try again.');
+    }
+  };
 
   useEffect(() => {
     // Logo animation
@@ -103,11 +215,36 @@ const Auth = () => {
   const onLogin = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
-      toast.success('Welcome back to NihonLab! 🎌');
-      navigate('/');
+      const response = await fetch(`${API_BASE_URL}/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
+      });
+
+      const responseData: AuthResponse = await response.json();
+
+      if (response.ok) {
+        // Store tokens
+        localStorage.setItem('access_token', responseData.tokens.access);
+        localStorage.setItem('refresh_token', responseData.tokens.refresh);
+        localStorage.setItem('user', JSON.stringify(responseData.user));
+
+        // Update store
+        setUser(responseData.user);
+
+        toast.success('Welcome back to NihonLab! 🎌');
+        navigate('/dashboard');
+      } else {
+        toast.error((responseData as any).error || 'Invalid email or password');
+      }
     } catch (error) {
-      toast.error('Invalid email or password');
+      console.error('Login error:', error);
+      toast.error('Failed to login. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -121,32 +258,45 @@ const Auth = () => {
     
     setIsLoading(true);
     try {
-      await signup(data.name, data.email, data.password);
-      
-      // Success animation
-      gsap.fromTo(
-        '.success-icon',
-        { scale: 0, rotation: -180 },
-        { scale: 1, rotation: 0, duration: 0.6, ease: 'elastic.out(1, 0.5)' }
-      );
-      
-      toast.success('Account created successfully! 🎉');
-      setTimeout(() => navigate('/'), 500);
-    } catch (error) {
-      toast.error('Failed to create account');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const response = await fetch(`${API_BASE_URL}/register/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          first_name: data.first_name,
+          last_name: data.last_name,
+        }),
+      });
 
-  const onGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      await loginWithGoogle();
-      toast.success('Welcome to NihonLab! 🎌');
-      navigate('/app/dashboard');
+      const responseData: AuthResponse = await response.json();
+
+      if (response.ok) {
+        // Store tokens
+        localStorage.setItem('access_token', responseData.tokens.access);
+        localStorage.setItem('refresh_token', responseData.tokens.refresh);
+        localStorage.setItem('user', JSON.stringify(responseData.user));
+
+        // Update store
+        setUser(responseData.user);
+
+        // Success animation
+        gsap.fromTo(
+          '.success-icon',
+          { scale: 0, rotation: -180 },
+          { scale: 1, rotation: 0, duration: 0.6, ease: 'elastic.out(1, 0.5)' }
+        );
+        
+        toast.success('Account created successfully! 🎉');
+        setTimeout(() => navigate('/'), 500);
+      } else {
+        toast.error((responseData as any).error || 'Failed to create account');
+      }
     } catch (error) {
-      toast.error('Google sign-in failed');
+      console.error('Signup error:', error);
+      toast.error('Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -155,6 +305,7 @@ const Auth = () => {
   const onForgotPassword = async (data: ForgotForm) => {
     setIsLoading(true);
     try {
+      // TODO: Implement forgot password API endpoint in Django
       await new Promise(resolve => setTimeout(resolve, 1000));
       setResetSent(true);
       
@@ -272,10 +423,10 @@ const Auth = () => {
                 </div>
 
                 <Button
-                  onClick={onGoogleLogin}
+                  onClick={handleGoogleLogin}
                   variant="outline"
                   className="w-full py-6 rounded-xl transition-all hover:scale-105 hover:bg-muted"
-                  disabled={isLoading}
+                  disabled={isLoading || !isGoogleLoaded}
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -325,15 +476,29 @@ const Auth = () => {
                 </h2>
                 <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-4">
                   <div className="form-field space-y-2">
-                    <Label htmlFor="name" className="text-foreground">Name</Label>
+                    <Label htmlFor="first_name" className="text-foreground">First Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
                       <Input
-                        id="name"
+                        id="first_name"
                         type="text"
-                        placeholder="Your name"
+                        placeholder="First name"
                         className="pl-10 focus:ring-2 focus:ring-indigo-500 transition-all"
-                        {...signupForm.register('name', { required: true })}
+                        {...signupForm.register('first_name', { required: true })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-field space-y-2">
+                    <Label htmlFor="last_name" className="text-foreground">Last Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                      <Input
+                        id="last_name"
+                        type="text"
+                        placeholder="Last name"
+                        className="pl-10 focus:ring-2 focus:ring-indigo-500 transition-all"
+                        {...signupForm.register('last_name', { required: true })}
                       />
                     </div>
                   </div>
@@ -435,10 +600,10 @@ const Auth = () => {
                 </div>
 
                 <Button
-                  onClick={onGoogleLogin}
+                  onClick={handleGoogleLogin}
                   variant="outline"
                   className="w-full py-6 rounded-xl transition-all hover:scale-105 hover:bg-muted"
-                  disabled={isLoading}
+                  disabled={isLoading || !isGoogleLoaded}
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -549,5 +714,19 @@ const Auth = () => {
     </div>
   );
 };
+
+// Extend Window interface for Google Sign-In
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 export default Auth;

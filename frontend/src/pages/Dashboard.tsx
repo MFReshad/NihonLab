@@ -52,7 +52,7 @@ const Dashboard = () => {
       {/* Welcome Section */}
       <div className="stat-card">
         <h1 className="text-4xl font-heading font-bold mb-2">
-          Welcome back, {user?.name}! 👋
+          Welcome back, {user ? `${user.first_name} ${user.last_name}` : 'Learner'}! 👋
         </h1>
         <p className="text-muted-foreground text-lg">
           Ready to continue your Japanese learning journey?

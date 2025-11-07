@@ -17,19 +17,19 @@ const AppNavbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const isActive = (path: string) => location.pathname === path;
   const navLinks = [{
-    path: '/app/dashboard',
+    path: '/dashboard',
     label: 'Dashboard',
     icon: LayoutDashboard
   }, {
-    path: '/app/wordlist',
+    path: '/wordlist',
     label: 'Wordlist',
     icon: Library
   }, {
-    path: '/app/flashcards',
+    path: '/flashcards',
     label: 'Flashcards',
     icon: BookOpen
   }, {
-    path: '/app/history',
+    path: '/history',
     label: 'History',
     icon: History
   }];
@@ -80,7 +80,7 @@ const AppNavbar = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full overflow-hidden ring-2 ring-primary/20 hover:ring-primary/40 transition-all">
-                  {user?.avatarUrl ? <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-hero flex items-center justify-center">
+                  {user?.avatar_url ? <img src={user.avatar_url} alt={user.email} className="aishik07" /> : <div className="h-full w-full bg-gradient-hero flex items-center justify-center">
                       <User className="w-5 h-5 text-white" />
                     </div>}
                 </Button>
@@ -88,14 +88,14 @@ const AppNavbar = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.name}</p>
+                    <p className="text-sm font-medium leading-none">{user && `${user.first_name} ${user.last_name}`}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/app/dashboard')}>
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   <span>Dashboard</span>
                 </DropdownMenuItem>
