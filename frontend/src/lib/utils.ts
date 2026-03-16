@@ -130,7 +130,7 @@ export const authenticatedFetch = async (
     }
 
     const data = await refreshResponse.json();
-    setTokens(data.access, refreshToken);
+    setTokens({ access: data.access, refresh: refreshToken });
 
     // Retry the original request with new token
     response = await fetch(url, {

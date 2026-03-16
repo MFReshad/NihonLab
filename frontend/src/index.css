@@ -202,3 +202,34 @@
     @apply scale-105 -translate-y-1 shadow-float;
   }
 }
+
+
+@layer utilities {
+  /* ... your existing utilities ... */
+
+  /* Furigana (Ruby) Styling */
+  ruby {
+    ruby-position: over;
+    ruby-align: center;
+  }
+
+  ruby rt {
+    font-size: 0.5em;
+    color: hsl(var(--muted-foreground));
+    font-weight: 400;
+    user-select: none;
+    line-height: 1;
+    letter-spacing: 0.05em;
+  }
+
+  /* Optional: Furigana for dark mode */
+  .dark ruby rt {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.9;
+  }
+
+  /* Furigana in Japanese text context */
+  .japanese-text ruby rt {
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+}

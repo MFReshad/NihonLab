@@ -140,7 +140,10 @@ export const WordDetailModal = ({ word, open, onClose }: WordDetailModalProps) =
                 <div className="space-y-3">
                   {word.examples.map((example, idx) => (
                     <div key={idx} className="border-l-2 border-orange-primary pl-4">
-                      <p className="text-lg font-japanese mb-1">{example.jp}</p>
+                      <p 
+                        className="text-lg japanese-text mb-1"
+                        dangerouslySetInnerHTML={{ __html: example.jp }}
+                      />
                       <p className="text-sm text-muted-foreground">{example.en}</p>
                     </div>
                   ))}
